@@ -24,9 +24,7 @@ async function discordRequest(endpoint, options = {}) {
   const text = await response.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-  if (!response.ok) {
-    throw new Error(`Discord ${response.status}: ${data?.message || data?.raw || "erro"}`);
-  }
+  if (!response.ok) throw new Error(`Discord ${response.status}: ${data?.message || data?.raw || "erro"}`);
   return data;
 }
 
@@ -44,35 +42,38 @@ function getCustomerFromRequest(req, db) {
   return db.prepare("SELECT * FROM customers WHERE id=? AND active=1").get(session.customer_id) || null;
 }
 
-// Purchases are account-only. This runs before the existing /api/orders handler.
+// Every purchase now requires a customer account/session.
 express.application.post = function patchedPost(route, ...handlers) {
   if (route === "/api/orders" && handlers.length) {
     const requireCustomer = (req, res, next) => {
       const db = openDb();
-      try {
-        const customer = getCustomerFromRequest(req, db);
-        if (!customer) return res.status(401).json({ error: "Tens de iniciar sessão ou criar uma conta para comprar." });
-        req.customer = customer;
-
-        const orderColumns = db.prepare("PRAGMA table_info(orders)").all().map(x => x.name);
-        if (!orderColumns.includes("customer_id")) db.exec("ALTER TABLE orders ADD COLUMN customer_id INTEGER DEFAULT NULL");
-
-        const originalJson = res.json.bind(res);
-        res.json = function(payload) {
-          try {
-            if (payload?.order?.order_number) {
-              db.prepare("UPDATE orders SET customer_id=? WHERE order_number=?").run(customer.id, payload.order.order_number);
-            }
-          } catch (error) {
-            console.error("Order account link:", error.message);
-          }
-          return originalJson(payload);
-        };
-        next();
-      } finally {
-        // The request handler owns its own DB connection. Do not keep this connection open.
+      const customer = getCustomerFromRequest(req, db);
+      if (!customer) {
         db.close();
+        return res.status(401).json({ error: "Tens de iniciar sessão ou criar uma conta para comprar." });
       }
+      req.customer = customer;
+
+      const orderColumns = db.prepare("PRAGMA table_info(orders)").all().map(x => x.name);
+      if (!orderColumns.includes("customer_id")) db.exec("ALTER TABLE orders ADD COLUMN customer_id INTEGER DEFAULT NULL");
+
+      const originalJson = res.json.bind(res);
+      let closed = false;
+      const closeDb = () => { if (!closed) { closed = true; try { db.close(); } catch {} } };
+      res.once("finish", closeDb);
+      res.once("close", closeDb);
+
+      res.json = function(payload) {
+        try {
+          if (payload?.order?.order_number) {
+            db.prepare("UPDATE orders SET customer_id=? WHERE order_number=?").run(customer.id, payload.order.order_number);
+          }
+        } catch (error) {
+          console.error("Order account link:", error.message);
+        }
+        return originalJson(payload);
+      };
+      next();
     };
     return originalPost.call(this, route, requireCustomer, ...handlers);
   }
@@ -91,7 +92,6 @@ async function createDiscordTicket(ticketNumber) {
       LEFT JOIN customers c ON c.id=t.customer_id
       WHERE t.ticket_number=?
     `).get(ticketNumber);
-
     if (!ticket) throw new Error(`Ticket ${ticketNumber} não encontrado na base de dados.`);
 
     const category = await discordRequest(`/channels/${categoryId}`);
@@ -102,12 +102,9 @@ async function createDiscordTicket(ticketNumber) {
     try { db.prepare("ALTER TABLE tickets ADD COLUMN discord_message_id TEXT DEFAULT ''").run(); } catch {}
 
     const existing = db.prepare("SELECT discord_channel_id FROM tickets WHERE id=?").get(ticket.id);
-    if (existing?.discord_channel_id) {
-      console.log(`Discord: ${ticket.ticket_number} já está ligado a ${existing.discord_channel_id}.`);
-      return existing.discord_channel_id;
-    }
+    if (existing?.discord_channel_id) return existing.discord_channel_id;
 
-    // The channel inherits the permissions of the supplied category.
+    // The channel inherits the permissions configured on the supplied category.
     const channel = await discordRequest(`/guilds/${guildId}/channels`, {
       method: "POST",
       body: JSON.stringify({
@@ -160,9 +157,7 @@ async function syncTicketStatus(ticketId, status) {
       method: "POST",
       body: JSON.stringify({ content: `🔔 **${ticket.ticket_number}** foi atualizado para **${status}**.` })
     });
-  } finally {
-    db.close();
-  }
+  } finally { db.close(); }
 }
 
 function inspectResponse(req, body) {
@@ -179,7 +174,8 @@ function inspectResponse(req, body) {
             console.error("Discord ticket:", error.message);
             try {
               const db = openDb();
-              try { db.prepare("INSERT INTO audit_log(action,target,details) VALUES(?,?,?)").run("ticket.discord_error", String(payload.ticketNumber), error.message); } finally { db.close(); }
+              try { db.prepare("INSERT INTO audit_log(action,target,details) VALUES(?,?,?)").run("ticket.discord_error", String(payload.ticketNumber), error.message); }
+              finally { db.close(); }
             } catch {}
           });
         });
@@ -190,16 +186,13 @@ function inspectResponse(req, body) {
 
   const match = method === "PATCH" ? url.match(/^\/api\/admin\/tickets\/(\d+)(?:\?|$)/) : null;
   if (match) {
-    try {
-      const ticketId = Number(match[1]);
-      setImmediate(() => {
-        const db = openDb();
-        try {
-          const ticket = db.prepare("SELECT status FROM tickets WHERE id=?").get(ticketId);
-          if (ticket) syncTicketStatus(ticketId, ticket.status).catch(error => console.error("Discord ticket status:", error.message));
-        } finally { db.close(); }
-      });
-    } catch {}
+    setImmediate(() => {
+      const db = openDb();
+      try {
+        const ticket = db.prepare("SELECT status FROM tickets WHERE id=?").get(Number(match[1]));
+        if (ticket) syncTicketStatus(Number(match[1]), ticket.status).catch(error => console.error("Discord ticket status:", error.message));
+      } finally { db.close(); }
+    });
   }
 }
 
@@ -207,7 +200,6 @@ http.ServerResponse.prototype.end = function patchedEnd(chunk, encoding, callbac
   let body = "";
   if (typeof chunk === "string") body = chunk;
   else if (Buffer.isBuffer(chunk)) body = chunk.toString("utf8");
-
   inspectResponse(this.req, body);
   return originalEnd.call(this, chunk, encoding, callback);
 };
