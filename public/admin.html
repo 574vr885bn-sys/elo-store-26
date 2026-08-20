@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elo Store — Administração</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#08090c;color:#f5f7fa;font-family:Inter,Arial,sans-serif}button,input,select,textarea{font:inherit}
+.wrap{max-width:1400px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.brand{font-size:24px;font-weight:900}.muted{color:#89909d}.btn{border:1px solid #2a2e38;background:#171920;color:#fff;border-radius:10px;padding:10px 14px;cursor:pointer}.btn.primary{background:#fff;color:#08090c;border-color:#fff}.btn.danger{border-color:#52242a;color:#ffb5bb}.login{max-width:520px;margin:9vh auto;padding:34px;border:1px solid #252832;border-radius:22px;background:#111319}.login h1{font-size:34px}.field{display:grid;gap:7px;margin:12px 0}.field input,.field select,.field textarea,.input{width:100%;background:#0c0e12;color:#fff;border:1px solid #2b303b;border-radius:9px;padding:11px}.field textarea{min-height:110px;resize:vertical}.err{color:#ff8d98;margin-top:12px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{background:#111319;border:1px solid #252832;border-radius:16px;padding:18px}.stat b{font-size:28px;display:block;margin-top:8px}.tabs{display:flex;gap:8px;overflow:auto;margin:24px 0}.tabs button.active{background:#fff;color:#08090c}.panel{background:#111319;border:1px solid #252832;border-radius:18px;padding:20px;margin-bottom:20px}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:850px}.table th,.table td{text-align:left;padding:12px;border-bottom:1px solid #242833;vertical-align:top}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.item{border:1px solid #292e38;border-radius:14px;padding:16px}.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.actions{display:flex;gap:8px;flex-wrap:wrap}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#1b1f28;color:#cdd3dc;font-size:12px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.hidden{display:none!important}.notice{padding:12px;border-radius:10px;background:#171a22;color:#aeb5c1;margin:10px 0}.switch{display:flex;align-items:center;gap:10px}.switch input{width:18px;height:18px}.success{color:#82e0a4}.warning{color:#ffc86b}@media(max-width:900px){.grid,.cards,.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:620px){.wrap{padding:16px}.grid,.cards,.form-grid{grid-template-columns:1fr}.top{gap:12px;align-items:flex-start}}
+</style></head>
+<body>
+<div id="login" class="login">
+  <div class="muted">ELO STORE</div><h1>Painel de administração</h1>
+  <div class="field"><label>Utilizador</label><input id="u" value="admin"></div>
+  <div class="field"><label>Password</label><input id="p" type="password"></div>
+  <button class="btn primary" style="width:100%" onclick="login()">Entrar</button>
+  <div id="err" class="err"></div>
+</div>
+
+<div id="app" class="wrap hidden">
+  <div class="top"><div><div class="muted">ELO STORE</div><div class="brand">Painel de administração</div></div><button class="btn" onclick="logout()">Sair</button></div>
+  <div class="grid">
+    <div class="stat">Pedidos<b id="sTotal">0</b></div><div class="stat">Pendentes<b id="sPending">0</b></div><div class="stat">Em processamento<b id="sProcessing">0</b></div><div class="stat">Receita<b id="sRevenue">R$ 0,00</b></div>
+  </div>
+  <div class="tabs">
+    <button id="tOrders" class="btn active" onclick="showTab('orders')">📦 Pedidos</button>
+    <button id="tProducts" class="btn" onclick="showTab('products')">🛍️ Produtos</button>
+    <button id="tAnnouncements" class="btn" onclick="showTab('announcements')">📢 Anúncios</button>
+    <button id="tSite" class="btn" onclick="showTab('site')">⚙️ Site</button>
+    <button id="tCoupons" class="btn" onclick="showTab('coupons')">🏷️ Cupões</button>
+    <button id="tReviews" class="btn" onclick="showTab('reviews')">⭐ Avaliações</button>
+  </div>
+
+  <section id="orders" class="panel">
+    <div class="row"><h2>Pedidos</h2><button class="btn" onclick="load()">↻ Atualizar</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Produto</th><th>Total</th><th>Estado</th><th>Data</th></tr></thead><tbody id="ordersBody"></tbody></table></div>
+  </section>
+
+  <section id="products" class="panel hidden">
+    <div class="row"><h2>Produtos</h2><button class="btn primary" onclick="toggle('newProduct')">+ Novo produto</button></div>
+    <div id="newProduct" class="item hidden">
+      <div class="form-grid">
+        <div class="field"><label>Nome</label><input id="npName"></div><div class="field"><label>Categoria</label><input id="npCategory" value="Digital"></div>
+        <div class="field"><label>Preço</label><input id="npPrice" type="number" step="0.01"></div><div class="field"><label>Stock</label><input id="npStock" type="number" value="0"></div>
+      </div>
+      <div class="field"><label>Descrição</label><input id="npDesc"></div><div class="field"><label>Informações</label><textarea id="npInfo"></textarea></div>
+      <button class="btn primary" onclick="createProduct()">Criar produto</button>
+    </div>
+    <div id="productsList" class="cards"></div>
+  </section>
+
+  <section id="announcements" class="panel hidden">
+    <div class="row"><h2>Anúncios no site</h2></div>
+    <div class="notice">O anúncio aparece no topo da loja. Podes criar promoções, avisos, novidades ou alertas.</div>
+    <div class="item">
+      <div class="form-grid"><div class="field"><label>Título</label><input id="aTitle" placeholder="🔥 Promoção ELO10"></div><div class="field"><label>Tipo</label><select id="aType"><option value="info">Informação</option><option value="success">Sucesso</option><option value="warning">Aviso</option><option value="danger">Alerta</option></select></div></div>
+      <div class="field"><label>Mensagem</label><textarea id="aMessage" placeholder="10% de desconto durante esta semana."></textarea></div>
+      <div class="field"><label>Expira em (opcional)</label><input id="aExpires" type="datetime-local"></div>
+      <button class="btn primary" onclick="createAnnouncement()">Publicar anúncio</button>
+    </div>
+    <div id="announcementsList" class="cards"></div>
+  </section>
+
+  <section id="site" class="panel hidden">
+    <h2>Configuração do site</h2>
+    <div class="item">
+      <label class="switch"><input id="maintenance" type="checkbox"><b>Ativar modo de manutenção</b></label>
+      <div class="notice">Quando estiver ativo, a homepage mostra a página de manutenção. O painel continua disponível.</div>
+      <div class="field"><label>Título da manutenção</label><input id="mTitle"></div>
+      <div class="field"><label>Mensagem</label><textarea id="mMessage"></textarea></div>
+      <label class="switch"><input id="announcementEnabled" type="checkbox"><b>Mostrar anúncios no site</b></label>
+      <br><button class="btn primary" onclick="saveSite()">Guardar alterações</button>
+      <span id="siteMsg" class="success"></span>
+    </div>
+  </section>
+
+  <section id="coupons" class="panel hidden">
+    <h2>Cupões</h2>
+    <div class="item">
+      <div class="form-grid"><div class="field"><label>Código</label><input id="cCode" placeholder="ELO10"></div><div class="field"><label>Desconto (%)</label><input id="cDiscount" type="number" min="1" max="100" value="10"></div></div>
+      <button class="btn primary" onclick="createCoupon()">Criar cupão</button>
+    </div>
+    <div id="couponsList" class="cards"></div>
+  </section>
+
+  <section id="reviews" class="panel hidden">
+    <h2>Avaliações</h2><div id="reviewsList" class="cards"></div>
+  </section>
+</div>
+
+<script>
+let token=localStorage.getItem("eloAdmin");
+const $=s=>document.querySelector(s);
+const money=n=>"R$ "+Number(n).toFixed(2).replace(".",",");
+async function api(u,o={}){o.headers={...(o.headers||{}),Authorization:"Bearer "+token};const r=await fetch(u,o);const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Erro");return d}
+async function login(){try{const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:$("#u").value,password:$("#p").value})});const d=await r.json();if(!r.ok)throw Error(d.error||"Credenciais inválidas.");token=d.token;localStorage.setItem("eloAdmin",token);start()}catch(e){$("#err").textContent=e.message}}
+async function start(){try{await api("/api/admin/stats");$("#login").classList.add("hidden");$("#app").classList.remove("hidden");load()}catch{logout()}}
+function logout(){localStorage.removeItem("eloAdmin");location.reload()}
+function showTab(t){["orders","products","announcements","site","coupons","reviews"].forEach(x=>$("#"+x).classList.toggle("hidden",x!==t));["orders","products","announcements","site","coupons","reviews"].forEach(x=>$("#t"+x[0].toUpperCase()+x.slice(1))?.classList.toggle("active",x===t));if(t==="announcements")loadAnnouncements();if(t==="site")loadSite();if(t==="coupons")loadCoupons();if(t==="reviews")loadReviews()}
+function toggle(id){$("#"+id).classList.toggle("hidden")}
+async function load(){const [s,o,p]=await Promise.all([api("/api/admin/stats"),api("/api/admin/orders"),api("/api/admin/products")]);$("#sTotal").textContent=s.total;$("#sPending").textContent=s.pending;$("#sProcessing").textContent=s.processing;$("#sRevenue").textContent=money(s.revenue);$("#ordersBody").innerHTML=o.map(x=>`<tr><td><b>${x.order_number}</b><br><span class="muted">${x.discord}</span></td><td>${x.customer_name}<br>${x.roblox}</td><td>${x.product_name} ×${x.quantity}</td><td>${money(x.total)}</td><td><select class="input" onchange="setStatus(${x.id},this.value)">${["Pendente","Pago","Em processamento","Entregue"].map(s=>`<option ${s===x.status?"selected":""}>${s}</option>`).join("")}</select>${x.proof_path?`<br><button class="btn" onclick="window.open('/api/admin/proof/${encodeURIComponent(x.proof_path)}','_blank')">Comprovativo</button>`:""}</td><td>${new Date(x.created_at.replace(" ","T")).toLocaleString("pt-PT")}</td></tr>`).join("");$("#productsList").innerHTML=p.map(x=>`<div class="item"><div class="row"><b>${x.name}</b><span class="badge">${x.active?"Ativo":"Oculto"}</span></div><div class="form-grid"><div class="field"><label>Preço</label><input class="input" id="price${x.id}" type="number" step="0.01" value="${x.price}"></div><div class="field"><label>Stock</label><input class="input" id="stock${x.id}" type="number" value="${x.stock}"></div></div><div class="actions"><button class="btn primary" onclick="saveProduct(${x.id})">Guardar</button><button class="btn danger" onclick="hideProduct(${x.id})">Ocultar</button></div></div>`).join("")}
+async function setStatus(id,status){try{await api("/api/admin/orders/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});load()}catch(e){alert(e.message)}}
+async function saveProduct(id){try{await api("/api/admin/products/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({price:Number($("#price"+id).value),stock:Number($("#stock"+id).value)})});alert("Produto guardado.");load()}catch(e){alert(e.message)}}
+async function hideProduct(id){if(!confirm("Ocultar este produto da loja?"))return;try{await api("/api/admin/products/"+id,{method:"DELETE"});load()}catch(e){alert(e.message)}}
+async function createProduct(){try{await api("/api/admin/products",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("#npName").value,category:$("#npCategory").value,price:Number($("#npPrice").value),stock:Number($("#npStock").value),description:$("#npDesc").value,info:$("#npInfo").value})});alert("Produto criado.");toggle("newProduct");load()}catch(e){alert(e.message)}}
+async function loadAnnouncements(){const a=await api("/api/admin/announcements");$("#announcementsList").innerHTML=a.length?a.map(x=>`<div class="item"><div class="row"><b>${esc(x.title)}</b><span class="badge">${x.active?"Ativo":"Desativado"}</span></div><p>${esc(x.message)}</p><div class="actions"><button class="btn" onclick="toggleAnnouncement(${x.id},${x.active?0:1})">${x.active?"Desativar":"Ativar"}</button><button class="btn danger" onclick="deleteAnnouncement(${x.id})">Apagar</button></div></div>`).join(""):"<div class='notice'>Ainda não tens anúncios.</div>"}
+async function createAnnouncement(){try{await api("/api/admin/announcements",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:$("#aTitle").value,message:$("#aMessage").value,type:$("#aType").value,expires_at:$("#aExpires").value?new Date($("#aExpires").value).toISOString():""})});$("#aTitle").value="";$("#aMessage").value="";loadAnnouncements();alert("Anúncio publicado.")}catch(e){alert(e.message)}}
+async function toggleAnnouncement(id,active){await api("/api/admin/announcements/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({active})});loadAnnouncements()}
+async function deleteAnnouncement(id){if(!confirm("Apagar este anúncio?"))return;await api("/api/admin/announcements/"+id,{method:"DELETE"});loadAnnouncements()}
+async function loadSite(){const s=await api("/api/admin/site");$("#maintenance").checked=!!s.maintenance;$("#mTitle").value=s.maintenance_title;$("#mMessage").value=s.maintenance_message;$("#announcementEnabled").checked=!!s.announcement_enabled}
+async function saveSite(){const s=await api("/api/admin/site",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({maintenance:$("#maintenance").checked,maintenance_title:$("#mTitle").value,maintenance_message:$("#mMessage").value,announcement_enabled:$("#announcementEnabled").checked})});$("#siteMsg").textContent=" Guardado!";setTimeout(()=>$("#siteMsg").textContent="",2500)}
+async function loadCoupons(){const c=await api("/api/admin/coupons");$("#couponsList").innerHTML=c.length?c.map(x=>`<div class="item"><div class="row"><b>${esc(x.code)}</b><span class="badge">${x.discount_percent}%</span></div><p>${x.active?"Ativo":"Desativado"}</p><div class="actions"><button class="btn" onclick="toggleCoupon(${x.id},${x.active?0:1})">${x.active?"Desativar":"Ativar"}</button><button class="btn danger" onclick="deleteCoupon(${x.id})">Apagar</button></div></div>`).join(""):"<div class='notice'>Nenhum cupão.</div>"}
+async function createCoupon(){try{await api("/api/admin/coupons",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:$("#cCode").value,discount_percent:Number($("#cDiscount").value)})});$("#cCode").value="";loadCoupons()}catch(e){alert(e.message)}}
+async function toggleCoupon(id,active){await api("/api/admin/coupons/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({active})});loadCoupons()}
+async function deleteCoupon(id){if(!confirm("Apagar este cupão?"))return;await api("/api/admin/coupons/"+id,{method:"DELETE"});loadCoupons()}
+async function loadReviews(){const r=await api("/api/admin/reviews");$("#reviewsList").innerHTML=r.length?r.map(x=>`<div class="item"><div class="row"><b>${esc(x.name)}</b><span>${"★".repeat(x.rating)}${"☆".repeat(5-x.rating)}</span></div><p>${esc(x.text)}</p><div class="actions"><button class="btn" onclick="moderateReview(${x.id},${x.approved?0:1})">${x.approved?"Ocultar":"Publicar"}</button></div></div>`).join(""):"<div class='notice'>Nenhuma avaliação.</div>"}
+async function moderateReview(id,approved){await api("/api/admin/reviews/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({approved})});loadReviews()}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+if(token)start();
+</script></body></html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elo Store — Robux e produtos digitais</title>
+<meta name="description" content="Elo Store — Robux e produtos digitais. Compra simples, suporte e entrega até 72 horas.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="header"><div class="container nav">
+<a class="brand" href="#inicio"><span class="brand-mark">E</span><span>ELO<span class="muted">STORE</span></span></a>
+<nav><a href="#produtos">Produtos</a><a href="#como-funciona">Como funciona</a><a href="#avaliacoes">Avaliações</a><a href="#faq">FAQ</a><a href="#sobre">Sobre</a></nav>
+<div class="nav-actions"><button class="ghost" onclick="openOrderLookup()">Consultar pedido</button><button class="cart-btn" onclick="openCart()">🛒 <b id="cartCount">0</b></button></div>
+</div></header>
+
+<div id="siteAnnouncement" class="site-announcement hidden"><div class="container announcement-inner"><span id="announcementIcon">📢</span><div><b id="announcementTitle"></b><span id="announcementMessage"></span></div><button onclick="hideAnnouncement()" aria-label="Fechar">×</button></div></div>
+<main id="inicio">
+<section class="hero"><div class="container hero-grid"><div>
+<div class="pill">⚡ ENTREGA ATÉ 72H • SUPORTE</div>
+<h1>A tua loja digital.<br><span>Simples. Rápida. Elo.</span></h1>
+<p>Compra Robux e outros produtos digitais com uma experiência simples, profissional e segura.</p>
+<div class="actions"><a class="btn primary" href="#produtos">Ver produtos</a><a class="btn secondary" href="#como-funciona">Como funciona</a></div>
+<div class="trust"><span>✓ Compra simples</span><span>✓ Pedido rastreável</span><span>✓ Suporte Discord</span></div>
+</div><div class="hero-card"><div class="glow"></div><div class="mini-top"><b>ELO STORE</b><span>ONLINE</span></div><div class="balance">ROBLOX</div><div class="robux">500 <strong>ROBUX</strong></div><div class="card-line"></div><div class="card-foot"><span>ENTREGA DIGITAL</span><span>24/7</span></div></div></div></section>
+
+<section class="section" id="produtos"><div class="container">
+<div class="section-head"><div><div class="eyebrow">LOJA</div><h2>Robux</h2></div><div class="search-wrap"><input id="search" placeholder="Pesquisar produto..." oninput="renderProducts()"></div></div>
+<div class="filters" id="filters"></div><div class="products" id="products"></div>
+</div></section>
+
+<section class="section dark" id="como-funciona"><div class="container"><div class="eyebrow">COMO FUNCIONA</div><h2>Comprar é fácil.</h2>
+<div class="steps"><div class="step"><b>01</b><h3>Escolhe</h3><p>Seleciona a quantidade de Robux que queres.</p></div><div class="step"><b>02</b><h3>Faz o pagamento</h3><p>Escolhe o método disponível e guarda o comprovativo.</p></div><div class="step"><b>03</b><h3>Envia os dados</h3><p>Indica o teu nome, Discord, Roblox e comprovativo.</p></div><div class="step"><b>04</b><h3>Acompanha</h3><p>Recebes um número como ELO-48291 para consultar o estado.</p></div></div></div></section>
+
+<section class="section" id="avaliacoes"><div class="container"><div class="eyebrow">CLIENTES</div><h2>Avaliações</h2><div id="reviews" class="reviews"></div><button class="btn secondary" onclick="openReview()">Deixar avaliação</button></div></section>
+
+<section class="section dark" id="faq"><div class="container narrow"><div class="eyebrow">AJUDA</div><h2>FAQ</h2><div class="faq">
+<details><summary>Quanto demora a entrega?</summary><p>O prazo máximo indicado pela Elo Store é de 72 horas após a confirmação do pagamento.</p></details>
+<details><summary>Como acompanho o meu pedido?</summary><p>Usa o número do pedido no botão “Consultar pedido”.</p></details>
+<details><summary>Que dados preciso de enviar?</summary><p>Nome, Discord, nome de utilizador Roblox e comprovativo de pagamento.</p></details>
+<details><summary>Posso pedir ajuda?</summary><p>Sim. Podes abrir um ticket através do pedido ou contactar o suporte da Elo Store.</p></details>
+</div></div></section>
+
+<section class="section" id="sobre"><div class="container narrow"><div class="eyebrow">ELO STORE</div><h2>Sobre nós</h2><p class="large">A Elo Store é uma loja digital focada numa experiência de compra simples, organizada e rápida. O nosso objetivo é tornar cada pedido fácil de acompanhar, desde o pagamento até à entrega.</p></div></section>
+
+<section class="section"><div class="container narrow"><div class="eyebrow">INFORMAÇÃO</div><h2>Termos e condições</h2><div class="terms">
+<p><b>1. Entrega</b><br>O prazo máximo de entrega é de 72 horas após a confirmação do pagamento, salvo indicação diferente no produto.</p>
+<p><b>2. Dados</b><br>O cliente deve fornecer dados corretos para que o pedido possa ser processado.</p>
+<p><b>3. Pagamentos</b><br>Um pedido só é considerado confirmado após a validação do pagamento.</p>
+<p><b>4. Suporte</b><br>Em caso de problema, usa o número do pedido para contactar o suporte.</p>
+</div></div></section>
+</main>
+
+<footer><div class="container footer"><div><div class="brand"><span class="brand-mark">E</span><span>ELO<span class="muted">STORE</span></span></div><p>Produtos digitais para a tua comunidade.</p></div><div><b>Links</b><a href="#produtos">Produtos</a><a href="#faq">FAQ</a><a href="#sobre">Sobre nós</a></div><div><b>Suporte</b><a href="#faq">Perguntas frequentes</a><a href="#" onclick="openOrderLookup();return false">Consultar pedido</a></div></div><div class="copyright">© 2026 Elo Store. Todos os direitos reservados.</div></footer>
+
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+<aside class="drawer" id="drawer"><div class="drawer-head"><h2>O teu carrinho</h2><button onclick="closeCart()">×</button></div><div id="cartItems"></div><div class="cart-bottom"><div><span>Total</span><strong id="cartTotal">R$ 0,00</strong></div><button class="btn primary full" onclick="openCheckout()">Finalizar pedido</button></div></aside>
+
+<div class="modal" id="productModal"><div class="modal-box"><button class="modal-close" onclick="closeModal('productModal')">×</button><div id="productDetails"></div></div></div>
+<div class="modal" id="checkoutModal"><div class="modal-box wide"><button class="modal-close" onclick="closeModal('checkoutModal')">×</button><div class="eyebrow">FINALIZAR PEDIDO</div><h2>Dados do cliente</h2><p class="muted-text">Depois de pagar, envia o comprovativo no formulário.</p>
+<form id="checkoutForm" enctype="multipart/form-data"><div class="form-grid">
+<label>Nome<input name="customerName" required placeholder="O teu nome"></label>
+<label>Discord<input name="discord" required placeholder="utilizador ou @utilizador"></label>
+<label>Roblox<input name="roblox" required placeholder="Nome de utilizador Roblox"></label>
+<label>Método de pagamento<select name="paymentMethod"><option>PIX</option><option>PayPal</option></select></label>
+</div><label>Comprovativo<input type="file" name="proof" accept=".png,.jpg,.jpeg,.webp,.pdf" required></label>
+<div class="coupon-row"><input id="coupon" placeholder="Código promocional"><button type="button" class="btn secondary" onclick="applyCoupon()">Aplicar</button></div><p id="couponMsg" class="small"></p>
+<div class="checkout-total">Total: <strong id="checkoutTotal">R$ 0,00</strong></div><button class="btn primary full" type="submit">Criar pedido</button></form></div></div>
+
+<div class="modal" id="paymentModal"><div class="modal-box"><button class="modal-close" onclick="closeModal('paymentModal')">×</button><div class="eyebrow">PAGAMENTO</div><h2>Dados para pagamento</h2><div class="pay-option"><b>PIX</b><code id="pixKey">A carregar...</code><button class="copy-btn" onclick="copyValue('pixKey')">Copiar</button></div><div class="pay-option"><b>PayPal</b><span id="paypalEmail">A carregar...</span><button class="copy-btn" onclick="copyValue('paypalEmail')">Copiar</button></div><p class="small">Confirma sempre o destinatário antes de pagar.</p><button class="btn secondary full" onclick="continueAfterPayment()">Já paguei — continuar</button></div></div>
+
+<div class="modal" id="successModal"><div class="modal-box"><div class="eyebrow">PEDIDO CRIADO</div><h2 id="successTitle">ELO-00000</h2><p id="successText"></p><button class="btn primary full" onclick="openTicketFromSuccess()">Criar ticket no Discord</button><button class="btn secondary full mt" onclick="closeModal('successModal');openOrderLookup()">Consultar pedido</button></div></div>
+
+<div class="modal" id="lookupModal"><div class="modal-box"><button class="modal-close" onclick="closeModal('lookupModal')">×</button><div class="eyebrow">PEDIDOS</div><h2>Consultar pedido</h2><div class="lookup-row"><input id="lookupNumber" placeholder="ELO-48291"><button class="btn primary" onclick="lookupOrder()">Pesquisar</button></div><div id="lookupResult"></div></div></div>
+
+<div class="modal" id="reviewModal"><div class="modal-box"><button class="modal-close" onclick="closeModal('reviewModal')">×</button><div class="eyebrow">AVALIAÇÃO</div><h2>Avalia a tua compra</h2><form id="reviewForm"><input name="orderNumber" required placeholder="Número do pedido, ex. ELO-48291"><input name="name" required placeholder="Nome"><select name="rating"><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select><textarea name="text" required placeholder="Escreve a tua avaliação..."></textarea><button class="btn primary full">Enviar avaliação</button></form></div></div>
+
+<script src="/script.js"></script>
+</body></html>

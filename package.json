@@ -1,0 +1,18 @@
+{
+  "name": "elo-store",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Elo Store - loja digital com pedidos, administração e Discord",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "discord.js": "^14.21.0",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "dotenv": "^16.4.7"
+  }
+}

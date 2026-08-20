@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="pt-PT"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elo Store — Manutenção</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#08090c;color:#f7f7f8;font-family:Inter,Arial,sans-serif}
+.card{width:min(680px,92vw);padding:52px 44px;border:1px solid #252832;border-radius:28px;background:#111319;text-align:center;box-shadow:0 30px 100px #0008}
+.logo{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;margin:0 auto 24px;background:#fff;color:#0a0b0e;font-size:28px;font-weight:900}
+.ey{letter-spacing:.18em;text-transform:uppercase;color:#8f96a3;font-size:12px;font-weight:800}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffb020;margin-right:8px}
+h1{font-size:42px;margin:14px 0 12px}p{color:#aeb4c0;font-size:17px;line-height:1.7;margin:0 auto;max-width:540px}
+.small{margin-top:28px;font-size:13px;color:#727987}
+</style></head><body><main class="card"><div class="logo">E</div><div class="ey"><span class="dot"></span>Elo Store</div><h1 id="title">Estamos em manutenção</h1><p id="message">Estamos a atualizar a loja. Voltamos já.</p><div class="small">Obrigado pela compreensão.</div></main>
+<script>
+fetch('/api/site-config').then(r=>r.json()).then(s=>{if(s.maintenanceTitle)title.textContent=s.maintenanceTitle;if(s.maintenanceMessage)message.textContent=s.maintenanceMessage}).catch(()=>{});
+</script></body></html>
