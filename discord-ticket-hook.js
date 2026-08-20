@@ -1,10 +1,12 @@
 const http = require("http");
 const path = require("path");
 const Database = require("better-sqlite3");
+const express = require("express");
 
 const DISCORD_API = "https://discord.com/api/v10";
 const DEFAULT_TICKET_CATEGORY_ID = "1538255344822788158";
 const originalEnd = http.ServerResponse.prototype.end;
+const originalPost = express.application.post;
 
 async function discordRequest(endpoint, options = {}) {
   const token = String(process.env.DISCORD_BOT_TOKEN || "");
@@ -34,6 +36,49 @@ function openDb() {
   return db;
 }
 
+function getCustomerFromRequest(req, db) {
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  const session = db.prepare("SELECT customer_id FROM customer_sessions WHERE token=? AND expires_at>? ").get(token, Date.now());
+  if (!session) return null;
+  return db.prepare("SELECT * FROM customers WHERE id=? AND active=1").get(session.customer_id) || null;
+}
+
+// Purchases are account-only. This runs before the existing /api/orders handler.
+express.application.post = function patchedPost(route, ...handlers) {
+  if (route === "/api/orders" && handlers.length) {
+    const requireCustomer = (req, res, next) => {
+      const db = openDb();
+      try {
+        const customer = getCustomerFromRequest(req, db);
+        if (!customer) return res.status(401).json({ error: "Tens de iniciar sessão ou criar uma conta para comprar." });
+        req.customer = customer;
+
+        const orderColumns = db.prepare("PRAGMA table_info(orders)").all().map(x => x.name);
+        if (!orderColumns.includes("customer_id")) db.exec("ALTER TABLE orders ADD COLUMN customer_id INTEGER DEFAULT NULL");
+
+        const originalJson = res.json.bind(res);
+        res.json = function(payload) {
+          try {
+            if (payload?.order?.order_number) {
+              db.prepare("UPDATE orders SET customer_id=? WHERE order_number=?").run(customer.id, payload.order.order_number);
+            }
+          } catch (error) {
+            console.error("Order account link:", error.message);
+          }
+          return originalJson(payload);
+        };
+        next();
+      } finally {
+        // The request handler owns its own DB connection. Do not keep this connection open.
+        db.close();
+      }
+    };
+    return originalPost.call(this, route, requireCustomer, ...handlers);
+  }
+  return originalPost.call(this, route, ...handlers);
+};
+
 async function createDiscordTicket(ticketNumber) {
   const categoryId = String(process.env.DISCORD_TICKET_CATEGORY_ID || DEFAULT_TICKET_CATEGORY_ID).trim();
   const db = openDb();
@@ -53,10 +98,8 @@ async function createDiscordTicket(ticketNumber) {
     const guildId = String(category.guild_id || "");
     if (!guildId) throw new Error("Não foi possível descobrir o servidor Discord através da categoria.");
 
-    // Migration is safe on old databases and only runs once.
-    try {
-      db.prepare("ALTER TABLE tickets ADD COLUMN discord_channel_id TEXT DEFAULT ''").run();
-    } catch {}
+    try { db.prepare("ALTER TABLE tickets ADD COLUMN discord_channel_id TEXT DEFAULT ''").run(); } catch {}
+    try { db.prepare("ALTER TABLE tickets ADD COLUMN discord_message_id TEXT DEFAULT ''").run(); } catch {}
 
     const existing = db.prepare("SELECT discord_channel_id FROM tickets WHERE id=?").get(ticket.id);
     if (existing?.discord_channel_id) {
@@ -64,7 +107,7 @@ async function createDiscordTicket(ticketNumber) {
       return existing.discord_channel_id;
     }
 
-    const botUser = await discordRequest("/users/@me");
+    // The channel inherits the permissions of the supplied category.
     const channel = await discordRequest(`/guilds/${guildId}/channels`, {
       method: "POST",
       body: JSON.stringify({
@@ -72,19 +115,14 @@ async function createDiscordTicket(ticketNumber) {
         type: 0,
         parent_id: categoryId,
         topic: `Elo Store • ${ticket.ticket_number} • ${ticket.customer_name || "Cliente"}`,
-        reason: `Novo ticket ${ticket.ticket_number}`,
-        permission_overwrites: [
-          {
-            id: String(botUser.id),
-            type: 1,
-            allow: "19456"
-          }
-        ]
+        reason: `Novo ticket ${ticket.ticket_number}`
       })
     });
 
+    const roleId = String(process.env.DISCORD_TICKET_ROLE_ID || "").trim();
+    const mention = roleId ? `<@&${roleId}>` : "@here";
     const content = [
-      `🎫 **NOVO TICKET — ${ticket.ticket_number}**`,
+      `${mention} 🎫 **NOVO TICKET — ${ticket.ticket_number}**`,
       `**Cliente:** ${ticket.customer_name || "—"}`,
       `**Email:** ${ticket.customer_email || "—"}`,
       `**Discord:** ${ticket.customer_discord || "—"}`,
@@ -95,12 +133,16 @@ async function createDiscordTicket(ticketNumber) {
       "📌 Este canal foi criado automaticamente pela Elo Store."
     ].join("\n");
 
-    await discordRequest(`/channels/${channel.id}/messages`, {
+    const sent = await discordRequest(`/channels/${channel.id}/messages`, {
       method: "POST",
-      body: JSON.stringify({ content })
+      body: JSON.stringify({
+        content,
+        allowed_mentions: roleId ? { parse: [], roles: [roleId] } : { parse: ["everyone"] }
+      })
     });
 
-    db.prepare("UPDATE tickets SET discord_channel_id=? WHERE id=?").run(String(channel.id), ticket.id);
+    db.prepare("UPDATE tickets SET discord_channel_id=?,discord_message_id=? WHERE id=?")
+      .run(String(channel.id), String(sent.id || ""), ticket.id);
     console.log(`Discord: ${ticket.ticket_number} criado na categoria ${categoryId}.`);
     return channel.id;
   } finally {
@@ -135,6 +177,10 @@ function inspectResponse(req, body) {
         setImmediate(() => {
           createDiscordTicket(String(payload.ticketNumber)).catch(error => {
             console.error("Discord ticket:", error.message);
+            try {
+              const db = openDb();
+              try { db.prepare("INSERT INTO audit_log(action,target,details) VALUES(?,?,?)").run("ticket.discord_error", String(payload.ticketNumber), error.message); } finally { db.close(); }
+            } catch {}
           });
         });
       }
@@ -145,8 +191,6 @@ function inspectResponse(req, body) {
   const match = method === "PATCH" ? url.match(/^\/api\/admin\/tickets\/(\d+)(?:\?|$)/) : null;
   if (match) {
     try {
-      const payload = JSON.parse(body);
-      // The existing admin endpoint returns only {ok:true}; read the new status from the DB.
       const ticketId = Number(match[1]);
       setImmediate(() => {
         const db = openDb();
@@ -155,7 +199,6 @@ function inspectResponse(req, body) {
           if (ticket) syncTicketStatus(ticketId, ticket.status).catch(error => console.error("Discord ticket status:", error.message));
         } finally { db.close(); }
       });
-      void payload;
     } catch {}
   }
 }
@@ -169,4 +212,4 @@ http.ServerResponse.prototype.end = function patchedEnd(chunk, encoding, callbac
   return originalEnd.call(this, chunk, encoding, callback);
 };
 
-console.log(`Discord ticket hook: ativo (categoria ${DEFAULT_TICKET_CATEGORY_ID}).`);
+console.log(`Discord ticket hook: ativo (categoria ${DEFAULT_TICKET_CATEGORY_ID}); compras exigem conta.`);
