@@ -1,6 +1,6 @@
 {
   "name": "elo-store",
-  "version": "4.3.1",
+  "version": "4.4.0",
   "private": true,
   "description": "Elo Store - loja digital com pedidos, administração, contas de clientes, pontos, suporte e Discord",
   "main": "server.js",
