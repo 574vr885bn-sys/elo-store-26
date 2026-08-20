@@ -38,15 +38,11 @@ Module._load = originalLoad;
 
 if (!capturedApp || !capturedDb) throw new Error("Elo Store bootstrap: não foi possível ligar às instâncias do servidor.");
 const { initEnhancements } = require("./enhancements");
-
-// Separate stateless admin authentication for the extended panel.
 const crypto = require("crypto");
 function adminV2(req,res,next) {
   const raw = String(req.headers["x-admin-key"] || "");
-  const expected = String(process.env.ADMIN_PANEL_KEY || "");
-  if (!expected || raw.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(raw), Buffer.from(expected))) {
-    return res.status(401).json({error:"Não autorizado."});
-  }
+  const expected = String(process.env.ADMIN_PANEL_KEY || process.env.ADMIN_PASSWORD || "");
+  if (!expected || raw.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(raw), Buffer.from(expected))) return res.status(401).json({error:"Não autorizado."});
   next();
 }
 initEnhancements(capturedApp, capturedDb, adminV2);
