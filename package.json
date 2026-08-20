@@ -1,12 +1,12 @@
 {
   "name": "elo-store",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "private": true,
   "description": "Elo Store - loja digital com pedidos, administração, contas de clientes, pontos, suporte e Discord",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node -r ./discord-ticket-hook.js server.js",
+    "dev": "node -r ./discord-ticket-hook.js server.js"
   },
   "engines": {
     "node": "22.14.0"
