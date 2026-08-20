@@ -71,18 +71,13 @@ class RestDiscordGuild {
   }
 }
 
-// Lightweight compatibility layer for the small subset of discord.js used by server.js.
 function lightweightDiscord() {
   class Client {
     constructor() {
       this.user = { tag: "Elo Store Moderação" };
       this.handlers = new Map();
-      this.channels = {
-        fetch: async id => new RestDiscordChannel(id)
-      };
-      this.guilds = {
-        fetch: async id => new RestDiscordGuild(id)
-      };
+      this.channels = { fetch: async id => new RestDiscordChannel(id) };
+      this.guilds = { fetch: async id => new RestDiscordGuild(id) };
     }
     once(event, handler) { this.handlers.set(event, handler); }
     async login(token) {
@@ -112,7 +107,6 @@ Module._load = function(request, parent, isMain) {
     const wrapped = function(...args) {
       const app = loaded(...args);
       capturedApp = app;
-
       const originalGet = app.get.bind(app);
       const originalUse = app.use.bind(app);
 
@@ -146,7 +140,6 @@ Module._load = function(request, parent, isMain) {
         }
         return originalUse(...args);
       };
-
       return app;
     };
 
@@ -178,14 +171,32 @@ if (!capturedApp || !capturedDb) {
 
 const { initEnhancements } = require("./enhancements");
 const crypto = require("crypto");
+const validAdminTokens = new Map();
 
-function adminV2(req, res, next) {
-  // Accept the existing admin Bearer session as well as the optional panel key.
+async function adminV2(req, res, next) {
   const bearer = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   const raw = String(req.headers["x-admin-key"] || "");
   const expected = String(process.env.ADMIN_PANEL_KEY || process.env.ADMIN_PASSWORD || "");
 
-  if (bearer && bearer.length > 20) return next();
+  // Validate the same Bearer token used by the existing admin panel by asking
+  // the legacy /api/admin/stats middleware to validate it. This avoids exposing
+  // the session map from server.js and never accepts arbitrary Bearer strings.
+  if (bearer) {
+    const cachedUntil = validAdminTokens.get(bearer) || 0;
+    if (cachedUntil > Date.now()) return next();
+    try {
+      const port = Number(process.env.PORT || 3000);
+      const check = await fetch(`http://127.0.0.1:${port}/api/admin/stats`, {
+        headers: { Authorization: `Bearer ${bearer}` }
+      });
+      if (check.ok) {
+        validAdminTokens.set(bearer, Date.now() + 60_000);
+        return next();
+      }
+    } catch {}
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+
   if (!expected || raw.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(raw), Buffer.from(expected))) {
     return res.status(401).json({ error: "Não autorizado." });
   }
