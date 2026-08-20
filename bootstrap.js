@@ -61,23 +61,21 @@ Module._load = function(request, parent, isMain) {
     return wrapped;
   }
 
-  if (request === "better-sqlite3") {
-    const OriginalDB = loaded;
-    function WrappedDB(...args) {
-      const db = new OriginalDB(...args);
-      capturedDb = db;
-      return db;
-    }
-    WrappedDB.prototype = OriginalDB.prototype;
-    Object.setPrototypeOf(WrappedDB, OriginalDB);
-    return WrappedDB;
-  }
-
   return loaded;
+};
+
+// Do not wrap the better-sqlite3 constructor. Native SQLite objects must keep their
+// original prototype/environment lifecycle, otherwise Node can abort during cleanup.
+const Database = require("better-sqlite3");
+const originalExec = Database.prototype.exec;
+Database.prototype.exec = function(...args) {
+  capturedDb = this;
+  return originalExec.apply(this, args);
 };
 
 require("./server.js");
 Module._load = originalLoad;
+Database.prototype.exec = originalExec;
 
 if (!capturedApp || !capturedDb) {
   throw new Error("Elo Store bootstrap: não foi possível ligar às instâncias do servidor.");
