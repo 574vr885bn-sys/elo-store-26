@@ -1,0 +1,7 @@
+[build]
+builder = "RAILPACK"
+
+[deploy]
+startCommand = "npm run start"
+restartPolicyType = "ALWAYS"
+restartPolicyMaxRetries = 10
