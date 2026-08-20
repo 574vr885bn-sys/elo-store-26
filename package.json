@@ -1,12 +1,12 @@
 {
   "name": "elo-store",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "private": true,
   "description": "Elo Store - loja digital com pedidos, administração, contas de clientes, pontos, suporte e Discord",
   "main": "server.js",
   "scripts": {
-    "start": "node bootstrap.js",
-    "dev": "node --watch bootstrap.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
