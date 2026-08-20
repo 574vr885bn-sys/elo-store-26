@@ -10,6 +10,20 @@ Module._load = function(request, parent, isMain) {
     const wrapped = function(...args) {
       const app = loaded(...args);
       capturedApp = app;
+      const originalGet = app.get.bind(app);
+      app.get = function(routeOrSetting, ...handlers) {
+        // The old server returned customer_name/Discord/Roblox from public order lookup.
+        // Replace that one route at registration time with a minimal public response.
+        if (routeOrSetting === "/api/orders/:number" && handlers.length) {
+          handlers = [function(req,res) {
+            if (!capturedDb) return res.status(503).json({error:"Serviço ainda a iniciar."});
+            const o = capturedDb.prepare(`SELECT o.order_number,o.quantity,o.total,o.status,o.payment_method,o.coupon,o.created_at,o.updated_at,p.name product_name FROM orders o JOIN products p ON p.id=o.product_id WHERE o.order_number=?`).get(req.params.number);
+            if (!o) return res.status(404).json({error:"Pedido não encontrado."});
+            res.json(o);
+          }];
+        }
+        return originalGet(routeOrSetting, ...handlers);
+      };
       return app;
     };
     Object.assign(wrapped, loaded);
